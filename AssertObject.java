@@ -10,29 +10,31 @@ public class AssertObject {
     public AssertObject isNotNull(){
         if(o != null){
             return this;
-        }else throw new NoSuchElementException("object isNotNull: wrong");
+        }throw new NoSuchElementException("object isNotNull: wrong");
 
     }
     public AssertObject isNull(){
         if(o == null){
             return this;
-        }else throw new NoSuchElementException("object isNull: wrong");
+        }throw new NoSuchElementException("object isNull: wrong");
 
 
     }
     public AssertObject isEqualTo(Object o2) {
-        if (o != null) {
-            if (o.equals(o2)) {
-                return this;
-            }
+        if ((o == null) && (o2 == null)) {
+            return this;
+        }
+        if (o.equals(o2)) {
+            return this;
         }throw new NoSuchElementException("object isEqualTo: wrong");
     }
 
     public AssertObject isNotEqualTo(Object o2){
-        if (o != null) {
-            if(!o.equals(o2)){
+        if ((o == null) && (o2 != null)) {
             return this;
-            }
+        }
+        if(!o.equals(o2)){
+        return this;
         }throw new NoSuchElementException("object isNotEqualTo: wrong");
     }
 

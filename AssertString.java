@@ -21,18 +21,20 @@ public class AssertString {
 
     }
     public AssertString isEqualTo(Object o2){
-        if (s != null) {
-            if (s.equals(o2)) {
-                return this;
-            }
+        if ((s == null) && (o2 == null)) {
+            return this;
+        }
+        if (s.equals(o2)) {
+            return this;
         }throw new NoSuchElementException("string isEqualTo: wrong");
 
     }
     public AssertString isNotEqualTo(Object o2){
-        if (s != null) {
-            if (!s.equals(o2)) {
-                return this;
-            }
+        if ((s == null) && (o2 != null)) {
+            return this;
+        }
+        if (!s.equals(o2)) {
+            return this;
         }throw new NoSuchElementException("string isNotEqualTo: wrong");
 
     }
@@ -45,10 +47,11 @@ public class AssertString {
 
     }
     public AssertString isEmpty(){
-        if (s != null) {
-            if (s.isEmpty()) {
-                return this;
-            }
+        if (s == null)  {
+            return this;
+        }
+        if (s.isEmpty()) {
+            return this;
         }throw new NoSuchElementException("string isEmpty: wrong");
     }
     public AssertString contains(String s2){
