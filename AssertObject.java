@@ -20,24 +20,27 @@ public class AssertObject {
 
 
     }
-    public AssertObject isEqualTo(Object o2){
-        if(o.equals(o2)){
-            return this;
-        }else throw new NoSuchElementException("object isEqualTo: wrong");
-
-
+    public AssertObject isEqualTo(Object o2) {
+        if (o != null) {
+            if (o.equals(o2)) {
+                return this;
+            }
+        }throw new NoSuchElementException("object isEqualTo: wrong");
     }
+
     public AssertObject isNotEqualTo(Object o2){
-        if(!o.equals(o2)){
+        if (o != null) {
+            if(!o.equals(o2)){
             return this;
-        }else throw new NoSuchElementException("object isNotEqualTo: wrong");
-
+            }
+        }throw new NoSuchElementException("object isNotEqualTo: wrong");
     }
+
     public AssertObject isInstanceOf(Class c){
-        if(c.isInstance(o)){
-            return this;
-        }else throw new NoSuchElementException("object isInstanceOf: wrong");
-
+        if (c != null) {
+            if (c.isInstance(o)) {
+                return this;
+            }
+        }throw new NoSuchElementException("object isInstanceOf: wrong");
     }
-
 }

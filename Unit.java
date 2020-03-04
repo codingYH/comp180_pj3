@@ -1,3 +1,4 @@
+import javax.management.ObjectName;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -6,6 +7,7 @@ import java.util.*;
 
 public class Unit {
     public static HashMap<String, Throwable> testClass(String name) {
+        Map<String, Method> mthMap = new HashMap<>();
         List<String> testMth = new LinkedList<String>();
         List<String> befClassMth = new LinkedList<String>();
         List<String> befMth = new LinkedList<String>();
@@ -19,43 +21,45 @@ public class Unit {
             throw new NoSuchElementException("ClassNotFoundException: " + e);
         }
         Method[] methods = c.getMethods();
-        int count = 0;
         for (Method m : methods) {
+            mthMap.put(m.getName(),m);
+            int count = 0;
             Annotation[] annotations = m.getAnnotations();
             for (Annotation a : annotations) {
-               if (a instanceof Test) {
+               if (a.annotationType().equals(Test.class) ) {
                     if (count == 0) {
                         testMth.add(m.getName());
                         count++;
-                    } else throw new NoSuchElementException("duplicated annotations");
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
                 }
                 if (a instanceof BeforeClass) {
                     if (count == 0) {
                         if (Modifier.isStatic(m.getModifiers())) {
                             befClassMth.add(m.getName());
                             count++;
-                        } else throw new NoSuchElementException("BeforeClass annotations: not public static");
-                    } else throw new NoSuchElementException("duplicated annotations");
+                        } else throw new NoSuchElementException("BeforeClass annotations: not public static " +m.getName());
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
                 }
-                if (a instanceof Before) {
+//                if (a .annotationType().equals(Before.class) ) {
+                if (a instanceof Before ) {
                     if (count == 0) {
                         befMth.add(m.getName());
                         count++;
-                    } else throw new NoSuchElementException("duplicated annotations");
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
                 }
                 if (a instanceof AfterClass) {
                     if (count == 0) {
                         if (Modifier.isStatic(m.getModifiers())) {
                             aftClassMth.add(m.getName());
                             count++;
-                        } else throw new NoSuchElementException("AfterClass annotations: not public static");
-                    } else throw new NoSuchElementException("duplicated annotations");
+                        } else throw new NoSuchElementException("AfterClass annotations: not public static " + m.getName());
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
                 }
                 if (a instanceof After) {
                     if (count == 0) {
                         aftMth.add(m.getName());
                         count++;
-                    } else throw new NoSuchElementException("duplicated annotations");
+                    } else throw new NoSuchElementException("duplicated annotations " +m.getName());
                 }
             }
         }
@@ -67,42 +71,61 @@ public class Unit {
         Collections.sort(aftMth);
         HashMap<String, Throwable> resl = new HashMap<String, Throwable>();
         //call all beforeClass methods
-        invokeMths(c, befClassMth, true);
+        invokeMths(mthMap, c, befClassMth);
 
         //call all Test methods
         for (int i = 0; i < testMth.size(); i++) {
+            Object instance = null;
+            try {
+                //instance should call bef-test-after, can not initialize every method
+                instance = c.getDeclaredConstructor().newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                e.printStackTrace();
+            }
             //assume no exception
             resl.put(testMth.get(i), null);
             //all before methods
-            invokeMths(c, befMth, false);
+            invokeMths(mthMap, instance, befMth);
             //i test case
             try {
-                Method tm = c.getMethod(testMth.get(i));
-                tm.invoke(c.getDeclaredConstructor().newInstance());
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                Method tm = mthMap.get(testMth.get(i));
+                tm.invoke(instance);
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 //exception
                 resl.put(testMth.get(i), e);
             }
             //all after methods
-            invokeMths(c, aftMth, false);
+            invokeMths(mthMap, instance, aftMth);
         }
         //all afterClass methods
-        invokeMths(c, aftClassMth, true);
+        invokeMths(mthMap, c, aftClassMth);
         //return result map
         return resl;
     }
 
-    //invoke all method in mths list
-    public static void invokeMths(Class c, List<String> mths, boolean isStatic){
+    //invoke all instance method
+    private static void invokeMths(Map<String, Method> mthMap, Object instance, List<String> mths){
         for (int i = 0; i < mths.size(); i++) {
             try {
-                Method m = c.getMethod(mths.get(i));
+                Method m = mthMap.get(mths.get(i));
                 //static,
-                if (isStatic == true){
-                    m.invoke(c);
-                }else m.invoke(c.getDeclaredConstructor().newInstance());
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
+                    m.invoke(instance);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+                throw new NoSuchElementException(" method invoke wrong: " + e);
+            }
+        }
+    }
+
+    //invoke all static method
+    private static void invokeMths(Map<String, Method> mthMap, Class c, List<String> mths){
+        for (int i = 0; i < mths.size(); i++) {
+            try {
+                Method m = mthMap.get(mths.get(i));
+                //static,
+                m.invoke(c);
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException(" method invoke wrong: " + e);
             }
@@ -110,6 +133,7 @@ public class Unit {
     }
 
     public static HashMap<String, Object[]> quickCheckClass(String name) {
+        Map<String, Method> mthMap = new HashMap<>();
         List<String> proptMth = new LinkedList<String>();
         HashMap<String, Object[]> resl = new HashMap<String, Object[]>();
         Class c = null;
@@ -121,6 +145,7 @@ public class Unit {
         }
         Method[] methods = c.getMethods();
         for (Method m : methods) {
+            mthMap.put(m.getName(), m);
             Annotation propAn = m.getAnnotation(Property.class);
             //has Property annotation
             if ((propAn != null) && propAn instanceof Property) {
@@ -133,32 +158,33 @@ public class Unit {
         for (int i = 0; i < proptMth.size(); i++) {
             //assume no exception
             resl.put(proptMth.get(i), null);
-            try {
-                Method propM = c.getMethod(proptMth.get(i));
-                Class[] paraType = propM.getParameterTypes();
-                Annotation[][] paraAnn = propM.getParameterAnnotations();
-                Object[] paras = null;
-                //repeat 100 times
-                for (int rep = 0; rep < 100; rep ++){
-                    paras = getArgs(c, paraType, paraAnn);
-                    try {
-                        propM.invoke(c.getDeclaredConstructor().newInstance(), paras);
-                    } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
-                        e.printStackTrace();
-                        //exception
-                        resl.put(proptMth.get(i), paras);
-                        break;
-                    }
+            Method propM = mthMap.get(proptMth.get(i));
+            Class[] paraType = propM.getParameterTypes();
+            Annotation[][] paraAnn = propM.getParameterAnnotations();
+            Object[] paras = null;
+            //repeat 100 times
+            for (int rep = 0; rep < 100; rep ++){
+                Object instance = null;
+                try {
+                    instance = c.getDeclaredConstructor().newInstance();
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    e.printStackTrace();
                 }
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-                throw new NoSuchElementException("NoSuchMethod" + e);
+                paras = getArgs(mthMap, c, paraType, paraAnn, instance);
+                try {
+                    propM.invoke(instance, paras);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                    //exception
+                    resl.put(proptMth.get(i), paras);
+                    break;
+                }
             }
         }
         return resl;
     }
 
-    public static Object[] getArgs(Class testClass, Class[] paraType, Annotation[][] paraAnn){
+    private static Object[] getArgs(Map<String, Method> mthMap, Class testClass, Class[] paraType, Annotation[][] paraAnn, Object instance){
         //args array
         Object[] paras = new Object[paraType.length];
         //generate args
@@ -166,13 +192,13 @@ public class Unit {
             if(paraType[i].equals(Integer.class)||paraType[i].equals(String.class)
                     ||paraType[i].equals(List.class)||paraType[i].equals(Object.class)){
                 // return one of paraType[i] argument
-                paras[i] = getArgByAnn(testClass, paraAnn[i]);
+                paras[i] = getArgByAnn(mthMap, testClass, paraAnn[i], instance);
             }else throw new NoSuchElementException("Argument type wrong");
         }
         return paras;
     }
 
-    public static Object getArgByAnn(Class testClass, Annotation[] ann){
+    private static Object getArgByAnn(Map<String, Method> mthMap, Class testClass, Annotation[] ann, Object instance){
         //get int
         if(ann[0] instanceof IntRange){
             IntRange intRange = (IntRange)ann[0];
@@ -194,7 +220,7 @@ public class Unit {
             for (int i = 0; i < len; i++){
                 Annotation[] eleAnn = Arrays.copyOfRange(ann, 1, ann.length);
                 //recursive call getArgByAnn
-                l.add(getArgByAnn(testClass, eleAnn));
+                l.add(getArgByAnn(mthMap, testClass, eleAnn, instance));
             }
             return l;
         }
@@ -207,13 +233,13 @@ public class Unit {
             int randCallTimes = getRandomIntInRange(1, times);
             Object re = null;
             try {
-                Method mth = testClass.getMethod(mthName);
+                Method mth = mthMap.get(mthName);
                 for (int t = 0; t < randCallTimes - 1; t++) {
-                    mth.invoke(testClass.getDeclaredConstructor().newInstance());
+                    mth.invoke(instance);
                 }
                 //call randCallTimes time
-                re = mth.invoke(testClass.getDeclaredConstructor().newInstance());
-            }catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                re = mth.invoke(instance);
+            }catch ( IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
                     throw new NoSuchElementException("ForAll: " + e);
                 }
@@ -224,7 +250,7 @@ public class Unit {
     }
 
     //a int range from min to max, inclusive
-    public static Integer getRandomIntInRange(int min, int max){
+    private static Integer getRandomIntInRange(int min, int max){
         Random r = new Random();
         return min + r.nextInt(max - min + 1);
     }
