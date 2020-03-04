@@ -10,7 +10,7 @@ public class TestClass {
 
     private LinkedList<String> list;
 
-    @BeforeClass
+   /* @BeforeClass
     public static void m1() {
         System.out.println("Using @BeforeClass , executed before all test cases ");
     }
@@ -24,13 +24,13 @@ public class TestClass {
     @AfterClass
     public static void m3() {
         System.out.println("Using @AfterClass ,executed after all test cases");
-    }
+    }*/
 
-    @After
+    /*@After
     public void m4() {
         list.clear();
         System.out.println("Using @After ,executed after each test cases");
-    }
+    }*/
 
     @Test
     public void m5() {
@@ -38,8 +38,11 @@ public class TestClass {
         System.out.println("Using @Test ,executed after each test cases");
     }
 
-    @Ignore
+   /* @Ignore
     public void m6() {
         System.out.println("Using @Ignore , this execution is ignored");
     }
+
+    @Property
+    public void*/
 }

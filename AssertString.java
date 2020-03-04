@@ -47,11 +47,10 @@ public class AssertString {
 
     }
     public AssertString isEmpty(){
-        if (s == null)  {
-            return this;
-        }
-        if (s.isEmpty()) {
-            return this;
+        if (s != null) {
+            if (s.isEmpty()) {
+                return this;
+            }
         }throw new NoSuchElementException("string isEmpty: wrong");
     }
     public AssertString contains(String s2){
