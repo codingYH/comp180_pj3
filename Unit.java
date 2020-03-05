@@ -90,6 +90,8 @@ public class Unit {
         invokeMths(mthMap, c, befClassMth);
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
+            //assume no exception
+            resl.put(proptMth.get(i), null);
             List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
@@ -113,9 +115,7 @@ public class Unit {
             }
             // get all possible combination of para
             List<Object[]> paraL = getAllParaInstance(paraArray);
-            int invokeCount = 0;
-            //assume no exception
-            resl.put(proptMth.get(i), null);
+            int invokeCount = 1;
             for (Object[] p : paraL) {
                 //at most invoke 100
                 if (invokeCount > 100) {
@@ -128,7 +128,7 @@ public class Unit {
                         propM.invoke(instance, p);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         e.printStackTrace();
-                        resl.put(proptMth.get(i), p);
+                        resl.put(propM.getName(), p);
                         break;
                     }
                     //all after methods
@@ -169,11 +169,12 @@ public class Unit {
             String mthName = forAll.name();
             try {
                 Method mth = mthMap.get(mthName);
-                for (int t = 0; t < forAll.times() - 1; t++) {
+                for (int t = 0; t < forAll.times(); t++) {
                     mth.invoke(instance);
+                    paraL.add(mth.invoke(instance));
                 }
                 //call randCallTimes time
-                paraL.add(mth.invoke(instance));
+
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException("ForAll: " + e);
@@ -197,7 +198,11 @@ public class Unit {
         for (int l = min; l <= max; l++) {
             if (ll.size() > 110) {
                 return ll;
-            } else {
+            } else if (getAllPossibleListParaByLength(l, lPara) == null){
+                ll.add(new LinkedList());
+                return ll;
+            }
+            else {
                 ll.addAll(getAllPossibleListParaByLength(l, lPara));
             }
         }
@@ -207,14 +212,17 @@ public class Unit {
     //return list of list
     private static List getAllPossibleListParaByLength(int length, List lPara) {
         List ll = new LinkedList();
-        if (length == 1) {
+        if(length == 0){
+            return null;
+        }
+         else if (ll.size() > 110){
+            return ll;
+        } else if (length == 1) {
             for (Object o : lPara) {
                 LinkedList lOne = new LinkedList();
                 lOne.add(o);
                 ll.add(lOne);
             }
-            return ll;
-        } else if (ll.size() > 110){
             return ll;
         } else {
             for (Object o : lPara) {

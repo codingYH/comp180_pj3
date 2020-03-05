@@ -6,8 +6,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 public class TestClass {
 
@@ -47,18 +46,19 @@ public class TestClass {
     }
 
     @Property
-    public void testInt(@IntRange(min = 1, max = 1) Integer i){
+    public void testInt(@IntRange(min = -3, max = 500) Integer i){
         System.out.println("testInt: " + i);
+        Assert.assertTrue(i < 70);
     }
 
     @Property
-    public void testStringSet(@StringSet(strings = {"1","as"}) String i){
+    public void testStringSet(@StringSet(strings = {"a","as", "baq", "aw","eas", "bfa", "ae","ase", "bea", "ea","aes", "baw"}) String i){
         System.out.println("testStringSet: " + i);
     }
 
 
     @Property
-    public void testList(@ListLength(min = 1, max = 5) List<@IntRange(min = 1, max = 7) Integer>  l, @IntRange(min = 1, max = 6) Integer i){
+    public void testList(@ListLength(min = 0, max = 0) List<@IntRange(min = 1, max = 30) Integer>  l, @IntRange(min = 1, max = 107) Integer i){
         System.out.println("testList: " + l + " " + i);
     }
 
