@@ -126,10 +126,14 @@ public class Unit {
 //                    invokeMths(mthMap, instance, befMth);
                     try {
                         invokeCount++;
-                        propM.invoke(instance, p);
+                        Object r = (Boolean) propM.invoke(instance, p);
+                        // false will not be catch
+                        if ((r instanceof Boolean) && ((boolean)r == false)){
+                            resl.put(propM.getName(), p);
+                            break;
+                        }
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         e.printStackTrace();
-                        System.out.println(propM.getName()+ " wrong " + e.getCause());
                         resl.put(propM.getName(), p);
                         break;
                     }
@@ -380,13 +384,8 @@ public class Unit {
             }
         }
     }
-    /*//a int range from min to max, inclusive
-    private static Integer getRandomIntInRange(int min, int max){
-        Random r = new Random();
-        return min + r.nextInt(max - min + 1);
     }
 
-*/
 
 
 
@@ -395,7 +394,3 @@ public class Unit {
 
 
 
-
-
-
-}

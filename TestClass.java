@@ -63,8 +63,13 @@ public class TestClass {
     }
 
     @Property
-    public void testList2(@ListLength(min = 0, max = 3) List<@IntRange(min = 1, max = 2) Integer>  l){
-        System.out.println("testList2: " + l + " ");
+    public void testList2(@ListLength(min = 0, max = 0) List<@IntRange(min = 1, max = 2) Integer>  l){
+        assertTrue(1>2);
+    }
+
+    @Property
+    public boolean testList3(@ListLength(min = 0, max = 0) List<@IntRange(min = 1, max = 2) Integer>  l){
+        return (1>2);
     }
 
 
