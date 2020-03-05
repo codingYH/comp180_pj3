@@ -87,7 +87,7 @@ public class Unit {
             mthMap.put(m.getName(), m);
         }
         //call all beforeClass methods
-        invokeMths(mthMap, c, befClassMth);
+//        invokeMths(mthMap, c, befClassMth);
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
             //assume no exception
@@ -123,7 +123,7 @@ public class Unit {
                     break;
                 } else {
                     //all before methods
-                    invokeMths(mthMap, instance, befMth);
+//                    invokeMths(mthMap, instance, befMth);
                     try {
                         invokeCount++;
                         propM.invoke(instance, p);
@@ -134,12 +134,12 @@ public class Unit {
                         break;
                     }
                     //all after methods
-                    invokeMths(mthMap, instance, aftMth);
+//                    invokeMths(mthMap, instance, aftMth);
                 }
             }
         }
         //all afterClass methods
-        invokeMths(mthMap, c, aftClassMth);
+//        invokeMths(mthMap, c, aftClassMth);
         return resl;
     }
 
