@@ -1,8 +1,6 @@
 import javax.management.ObjectName;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class Unit {
@@ -92,8 +90,8 @@ public class Unit {
                 tm.invoke(instance);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
-                //exception
-                resl.put(testMth.get(i), e);
+                //exception, !put getCause rather than e itself
+                resl.put(testMth.get(i), e.getCause());
             }
             //all after methods
             invokeMths(mthMap, instance, aftMth);
@@ -143,6 +141,13 @@ public class Unit {
             e.printStackTrace();
             throw new NoSuchElementException("ClassNotFoundException: " + e);
         }
+        //get instance
+        Object instance = null;
+        try {
+            instance = c.getDeclaredConstructor().newInstance();
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            e.printStackTrace();
+        }
         Method[] methods = c.getMethods();
         for (Method m : methods) {
             mthMap.put(m.getName(), m);
@@ -159,23 +164,33 @@ public class Unit {
             //assume no exception
             resl.put(proptMth.get(i), null);
             Method propM = mthMap.get(proptMth.get(i));
-            Class[] paraType = propM.getParameterTypes();
-            Annotation[][] paraAnn = propM.getParameterAnnotations();
-            Object[] paras = null;
+            AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
             //repeat 100 times
-            for (int rep = 0; rep < 100; rep ++){
-                Object instance = null;
-                try {
-                    instance = c.getDeclaredConstructor().newInstance();
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    e.printStackTrace();
+            for (int rep = 0; rep < 100; rep ++) {
+                //arg[] put arguments to invoke
+                Object[] arg = new Object[paras.length];
+                for (int pi = 0; pi < paras.length; pi++) {
+                    // @ListLength(min=0, max=2) List<T>
+                    if (paras[pi] instanceof AnnotatedParameterizedType) {
+                        List lPara = new LinkedList();
+                        int listLen = (int) getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance);
+                        //get generic type
+                        AnnotatedParameterizedType p = (AnnotatedParameterizedType) paras[pi];
+                        AnnotatedType[] genericType = p.getAnnotatedActualTypeArguments();
+                        Annotation genericAnn = genericType[0].getAnnotations()[0];
+                        for (int l = 0; l < listLen; l++) {
+                            lPara.add(getArgByAnn(genericAnn, mthMap, instance));
+                        }
+                        arg[pi] = lPara;
+                    }else {
+                        // other types para
+                        arg[pi] = getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance);
+                    }
                 }
-                paras = getArgs(mthMap, c, paraType, paraAnn, instance);
                 try {
-                    propM.invoke(instance, paras);
+                    propM.invoke(instance, arg);
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
-                    //exception
                     resl.put(proptMth.get(i), paras);
                     break;
                 }
@@ -184,49 +199,20 @@ public class Unit {
         return resl;
     }
 
-    private static Object[] getArgs(Map<String, Method> mthMap, Class testClass, Class[] paraType, Annotation[][] paraAnn, Object instance){
-        //args array
-        Object[] paras = new Object[paraType.length];
-        //generate args
-        for (int i = 0; i< paraType.length; i++){
-            if(paraType[i].equals(Integer.class)||paraType[i].equals(String.class)
-                    ||paraType[i].equals(List.class)||paraType[i].equals(Object.class)){
-                // return one of paraType[i] argument
-                paras[i] = getArgByAnn(mthMap, testClass, paraAnn[i], instance);
-            }else throw new NoSuchElementException("Argument type wrong");
-        }
-        return paras;
-    }
-
-    private static Object getArgByAnn(Map<String, Method> mthMap, Class testClass, Annotation[] ann, Object instance){
+    private static Object getArgByAnn(Annotation ann, Map<String, Method> mthMap, Object instance){
         //get int
-        if(ann[0] instanceof IntRange){
-            IntRange intRange = (IntRange)ann[0];
-           return getRandomIntInRange(intRange.min(), intRange.max());
+        if(ann instanceof IntRange){
+            IntRange intRange = (IntRange)ann;
+            return getRandomIntInRange(intRange.min(), intRange.max());
         }
         //get string
-        if(ann[0] instanceof StringSet){
-            StringSet strSet = (StringSet)ann[0];
+        if(ann instanceof StringSet){
+            StringSet strSet = (StringSet)ann;
             String[] s = strSet.strings();
             return s[getRandomIntInRange(0, s.length - 1)];
         }
-        //get list
-        if(ann[0] instanceof ListLength){
-            ListLength lAnn = (ListLength) ann[0];
-            //generate list's length
-            int len = getRandomIntInRange(lAnn.min(), lAnn.max());
-            List l = new LinkedList();
-            //generate list of len length
-            for (int i = 0; i < len; i++){
-                Annotation[] eleAnn = Arrays.copyOfRange(ann, 1, ann.length);
-                //recursive call getArgByAnn
-                l.add(getArgByAnn(mthMap, testClass, eleAnn, instance));
-            }
-            return l;
-        }
-        //get object
-        if(ann[0] instanceof ForAll){
-            ForAll forAll = (ForAll) ann[0];
+        if(ann instanceof ForAll){
+            ForAll forAll = (ForAll) ann;
             String mthName = forAll.name();
             int times = forAll.times();
             // pick a random time
@@ -240,13 +226,17 @@ public class Unit {
                 //call randCallTimes time
                 re = mth.invoke(instance);
             }catch ( IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                    throw new NoSuchElementException("ForAll: " + e);
-                }
+                e.printStackTrace();
+                throw new NoSuchElementException("ForAll: " + e);
+            }
             return re;
         }
+        if(ann instanceof ListLength){
+            ListLength listLength = (ListLength)ann;
+            return getRandomIntInRange(listLength.min(), listLength.max());
+        }
         //invalid para annotation
-        else throw new NoSuchElementException("Argument Annotation wrong");
+        else throw new NoSuchElementException("Argument Annotation wrong " + ann);
     }
 
     //a int range from min to max, inclusive
