@@ -91,7 +91,7 @@ public class Unit {
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
             //assume no exception
-            resl.put(proptMth.get(i), null);
+
             List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
@@ -115,7 +115,9 @@ public class Unit {
             }
             // get all possible combination of para
             List<Object[]> paraL = getAllParaInstance(paraArray);
+            //the first is 1
             int invokeCount = 1;
+            resl.put(proptMth.get(i), new Object[paras.length]);
             for (Object[] p : paraL) {
                 //at most invoke 100
                 if (invokeCount > 100) {
