@@ -62,6 +62,11 @@ public class TestClass {
         System.out.println("testList: " + l + " " + i);
     }
 
+    @Property
+    public void testList2(@ListLength(min = 0, max = 3) List<@IntRange(min = 1, max = 2) Integer>  l){
+        System.out.println("testList2: " + l + " ");
+    }
+
 
     @Property
     public void testObject(@ForAll(name="genIntSet", times=10) Object o) {

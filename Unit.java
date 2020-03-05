@@ -129,6 +129,7 @@ public class Unit {
                         propM.invoke(instance, p);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         e.printStackTrace();
+                        System.out.println(propM.getName()+ " wrong " + e.getCause());
                         resl.put(propM.getName(), p);
                         break;
                     }
@@ -201,7 +202,6 @@ public class Unit {
                 return ll;
             } else if (getAllPossibleListParaByLength(l, lPara) == null){
                 ll.add(new LinkedList());
-                return ll;
             }
             else {
                 ll.addAll(getAllPossibleListParaByLength(l, lPara));
