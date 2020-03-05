@@ -87,11 +87,11 @@ public class Unit {
             mthMap.put(m.getName(), m);
         }
         //call all beforeClass methods
-//        invokeMths(mthMap, c, befClassMth);
+        //invokeMths(mthMap, c, befClassMth);
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
             //assume no exception
-            resl.put( proptMth.get(i), new Object[]{new Object()});
+            resl.put(proptMth.get(i), null);
             List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
