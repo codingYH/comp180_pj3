@@ -4,6 +4,7 @@ import java.lang.reflect.*;
 import java.util.*;
 
 public class Unit {
+    private final static int listParaOffSet = 100;
     public static HashMap<String, Throwable> testClass(String name) {
         Map<String, Method> mthMap = new HashMap<>();
         List<String> testMth = new LinkedList<String>();
@@ -161,34 +162,41 @@ public class Unit {
         Collections.sort(proptMth);
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
-            //assume no exception
-            resl.put(proptMth.get(i), null);
+            List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
-            //repeat 100 times
-            for (int rep = 0; rep < 100; rep ++) {
-                //arg[] put arguments to invoke
-                Object[] arg = new Object[paras.length];
-                for (int pi = 0; pi < paras.length; pi++) {
-                    // @ListLength(min=0, max=2) List<T>
-                    if (paras[pi] instanceof AnnotatedParameterizedType) {
-                        List lPara = new LinkedList();
-                        int listLen = (int) getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance);
+            //get all possible arg put into paraMap
+            for (int pi = 0; pi < paras.length; pi++) {
+                Object[] paraList = new Object[paras.length];
+                // @ListLength(min=0, max=2) List<T>
+                if (paras[pi] instanceof AnnotatedParameterizedType) {
+                    if (paras[pi].getAnnotations()[0] instanceof ListLength) {
+                        ListLength listLength = (ListLength) paras[pi].getAnnotations()[0];
                         //get generic type
                         AnnotatedParameterizedType p = (AnnotatedParameterizedType) paras[pi];
                         AnnotatedType[] genericType = p.getAnnotatedActualTypeArguments();
                         Annotation genericAnn = genericType[0].getAnnotations()[0];
-                        for (int l = 0; l < listLen; l++) {
-                            lPara.add(getArgByAnn(genericAnn, mthMap, instance));
-                        }
-                        arg[pi] = lPara;
-                    }else {
-                        // other types para
-                        arg[pi] = getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance);
+                        List lPara = getArgByAnn(genericAnn, mthMap, instance);
+                        paraArray.add(getAllPossibleListPara(listLength.min(), listLength.max(),lPara));
                     }
+                }else {
+                    paraArray.add(getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance));
                 }
+            }
+            // get all possible combination of para
+            List<Object[]>  paraL = getAllParaInstance(paraArray);
+            int invokeCount = 0;
+            //assume no exception
+            resl.put(proptMth.get(i), null);
+            for (Object[] p : paraL) {
                 try {
-                    propM.invoke(instance, arg);
+                    //at most invoke 100
+                    if(invokeCount > 100){
+                        break;
+                    }else {
+                        propM.invoke(instance, p);
+                        invokeCount++;
+                    }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
                     resl.put(proptMth.get(i), paras);
@@ -199,53 +207,132 @@ public class Unit {
         return resl;
     }
 
-    private static Object getArgByAnn(Annotation ann, Map<String, Method> mthMap, Object instance){
+   /* private static List<List>  prepArg(Map<String, Method> mthMap, List<String> proptMth){
+
+    }*/
+
+
+    private static List getArgByAnn(Annotation ann, Map<String, Method> mthMap, Object instance){
+        List paraL = new LinkedList();
         //get int
         if(ann instanceof IntRange){
             IntRange intRange = (IntRange)ann;
-            return getRandomIntInRange(intRange.min(), intRange.max());
+            for (int i = intRange.min(); i <= intRange.max(); i++ ){
+                paraL.add(i);
+            }
+            return paraL;
         }
         //get string
         if(ann instanceof StringSet){
             StringSet strSet = (StringSet)ann;
-            String[] s = strSet.strings();
-            return s[getRandomIntInRange(0, s.length - 1)];
+            for (String s : strSet.strings()){
+                paraL.add(s);
+            }
+            return paraL;
         }
         if(ann instanceof ForAll){
             ForAll forAll = (ForAll) ann;
             String mthName = forAll.name();
-            int times = forAll.times();
-            // pick a random time
-            int randCallTimes = getRandomIntInRange(1, times);
-            Object re = null;
             try {
                 Method mth = mthMap.get(mthName);
-                for (int t = 0; t < randCallTimes - 1; t++) {
+                for (int t = 0; t < forAll.times() - 1; t++) {
                     mth.invoke(instance);
                 }
                 //call randCallTimes time
-                re = mth.invoke(instance);
+                paraL.add(mth.invoke(instance));
             }catch ( IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException("ForAll: " + e);
             }
-            return re;
+            return paraL;
         }
         if(ann instanceof ListLength){
             ListLength listLength = (ListLength)ann;
-            return getRandomIntInRange(listLength.min(), listLength.max());
+            for (int i = listLength.min(); i <= listLength.max(); i++ ){
+                paraL.add(i);
+            }
+            return paraL;
         }
         //invalid para annotation
         else throw new NoSuchElementException("Argument Annotation wrong " + ann);
     }
 
-    //a int range from min to max, inclusive
+    //return list of list
+    private static List getAllPossibleListPara(int min, int max, List lPara){
+        List<List>  ll = new LinkedList();
+        for (int l = min; l <= max; l++) {
+            if (ll.size() > 110){
+                return ll;
+            }else {
+                ll.addAll(getAllPossibleListParaByLength(l, lPara));
+            }
+        }
+        return ll;
+    }
+    //return list of list
+    private static List getAllPossibleListParaByLength(int length, List lPara){
+        List  ll = new LinkedList();
+        if (length == 1){
+            for (Object o : lPara) {
+                LinkedList lOne = new LinkedList();
+                lOne.add(o);
+                ll.add(lOne);
+            }
+            return ll;
+        } else {
+            for (Object o : lPara) {
+                //lMore is a list<Object> size = length - 1
+                for (Object lMore : getAllPossibleListParaByLength(length - 1, lPara)){
+                    List lm = (List)lMore;
+                    lm.add(o);
+                    ll.add(lm);
+                }
+            }
+            return ll;
+        }
+    }
+
+    // @Para  paraArray List<List>
+    // @return list<Object[]> each is possible para Array
+    private  static List<Object[]>  getAllParaInstance(List<List> paraArray){
+        List<Object[]> paraInstanceArrayList = new LinkedList();
+        // para size only 1
+        if (paraArray.size() == 1){
+            //paraArray.get(0) is list of possible values for this 0-th para
+            for (Object o : paraArray.get(0)){
+                Object[] paras =  new Object[1];
+                paras[0] = o;
+                paraInstanceArrayList.add(paras);
+            }
+            return paraInstanceArrayList;
+            //para more than 110
+        }else if (paraInstanceArrayList.size() > 110) {
+            return paraInstanceArrayList;
+        } else {
+            // //paraArray.get(paraArray.size() - 1) is
+            // list of possible values for this paraArray.size() - 1-th para
+            for (Object o : paraArray.get(paraArray.size() - 1)) {
+                // oa[paraArray.size() - 1]
+                for (Object[] oa : getAllParaInstance(paraArray.subList(0, paraArray.size() - 1))) {
+                    //copy and resize oa to paras[paraArray.size()]
+                    Object[] paras = Arrays.copyOf(oa, paraArray.size());
+                    //add the paraArray.size() - 1 -th para
+                    paras[paraArray.size() - 1] = o;
+                    // add this paras
+                    paraInstanceArrayList.add(paras);
+                }
+            }
+            return paraInstanceArrayList;
+        }
+    }
+
+    /*//a int range from min to max, inclusive
     private static Integer getRandomIntInRange(int min, int max){
         Random r = new Random();
         return min + r.nextInt(max - min + 1);
     }
 
-
+*/
 
 
 
