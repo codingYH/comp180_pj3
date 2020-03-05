@@ -5,13 +5,15 @@ import java.util.*;
 
 public class Unit {
     private final static int listParaOffSet = 100;
+
     public static HashMap<String, Throwable> testClass(String name) {
+        Map mthType = getMthType(name);
         Map<String, Method> mthMap = new HashMap<>();
-        List<String> testMth = new LinkedList<String>();
-        List<String> befClassMth = new LinkedList<String>();
-        List<String> befMth = new LinkedList<String>();
-        List<String> aftClassMth = new LinkedList<String>();
-        List<String> aftMth = new LinkedList<String>();
+        List<String> testMth = (List<String>) mthType.get("testMth");
+        List<String> befClassMth = (List<String>) mthType.get("befClassMth");
+        List<String> befMth = (List<String>) mthType.get("befMth");
+        List<String> aftClassMth = (List<String>) mthType.get("aftClassMth");
+        List<String> aftMth = (List<String>) mthType.get("aftMth");
         Class c = null;
         try {
             c = Class.forName(name);
@@ -21,53 +23,8 @@ public class Unit {
         }
         Method[] methods = c.getMethods();
         for (Method m : methods) {
-            mthMap.put(m.getName(),m);
-            int count = 0;
-            Annotation[] annotations = m.getAnnotations();
-            for (Annotation a : annotations) {
-               if (a.annotationType().equals(Test.class) ) {
-                    if (count == 0) {
-                        testMth.add(m.getName());
-                        count++;
-                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
-                }
-                if (a instanceof BeforeClass) {
-                    if (count == 0) {
-                        if (Modifier.isStatic(m.getModifiers())) {
-                            befClassMth.add(m.getName());
-                            count++;
-                        } else throw new NoSuchElementException("BeforeClass annotations: not public static " +m.getName());
-                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
-                }
-//                if (a .annotationType().equals(Before.class) ) {
-                if (a instanceof Before ) {
-                    if (count == 0) {
-                        befMth.add(m.getName());
-                        count++;
-                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
-                }
-                if (a instanceof AfterClass) {
-                    if (count == 0) {
-                        if (Modifier.isStatic(m.getModifiers())) {
-                            aftClassMth.add(m.getName());
-                            count++;
-                        } else throw new NoSuchElementException("AfterClass annotations: not public static " + m.getName());
-                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
-                }
-                if (a instanceof After) {
-                    if (count == 0) {
-                        aftMth.add(m.getName());
-                        count++;
-                    } else throw new NoSuchElementException("duplicated annotations " +m.getName());
-                }
-            }
+            mthMap.put(m.getName(), m);
         }
-        //sort all the methods name by alpha
-        Collections.sort(testMth);
-        Collections.sort(befClassMth);
-        Collections.sort(befMth);
-        Collections.sort(aftClassMth);
-        Collections.sort(aftMth);
         HashMap<String, Throwable> resl = new HashMap<String, Throwable>();
         //call all beforeClass methods
         invokeMths(mthMap, c, befClassMth);
@@ -104,12 +61,12 @@ public class Unit {
     }
 
     //invoke all instance method
-    private static void invokeMths(Map<String, Method> mthMap, Object instance, List<String> mths){
+    private static void invokeMths(Map<String, Method> mthMap, Object instance, List<String> mths) {
         for (int i = 0; i < mths.size(); i++) {
             try {
                 Method m = mthMap.get(mths.get(i));
                 //static,
-                    m.invoke(instance);
+                m.invoke(instance);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException(" method invoke wrong: " + e);
@@ -118,7 +75,7 @@ public class Unit {
     }
 
     //invoke all static method
-    private static void invokeMths(Map<String, Method> mthMap, Class c, List<String> mths){
+    private static void invokeMths(Map<String, Method> mthMap, Class c, List<String> mths) {
         for (int i = 0; i < mths.size(); i++) {
             try {
                 Method m = mthMap.get(mths.get(i));
@@ -132,8 +89,13 @@ public class Unit {
     }
 
     public static HashMap<String, Object[]> quickCheckClass(String name) {
+        Map mthType = getMthType(name);
         Map<String, Method> mthMap = new HashMap<>();
-        List<String> proptMth = new LinkedList<String>();
+        List<String> proptMth = (List<String>) mthType.get("proptMth");
+        List<String> befClassMth = (List<String>) mthType.get("befClassMth");
+        List<String> befMth = (List<String>) mthType.get("befMth");
+        List<String> aftClassMth = (List<String>) mthType.get("aftClassMth");
+        List<String> aftMth = (List<String>) mthType.get("aftMth");
         HashMap<String, Object[]> resl = new HashMap<String, Object[]>();
         Class c = null;
         try {
@@ -152,20 +114,15 @@ public class Unit {
         Method[] methods = c.getMethods();
         for (Method m : methods) {
             mthMap.put(m.getName(), m);
-            Annotation propAn = m.getAnnotation(Property.class);
-            //has Property annotation
-            if ((propAn != null) && propAn instanceof Property) {
-                proptMth.add(m.getName());
-            }
         }
-        //sort by alpha
-        Collections.sort(proptMth);
+        //call all beforeClass methods
+        invokeMths(mthMap, c, befClassMth);
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
             List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
-            //get all possible arg put into paraMap
+            //get all possible arg, put into paraMap
             for (int pi = 0; pi < paras.length; pi++) {
                 Object[] paraList = new Object[paras.length];
                 // @ListLength(min=0, max=2) List<T>
@@ -177,25 +134,29 @@ public class Unit {
                         AnnotatedType[] genericType = p.getAnnotatedActualTypeArguments();
                         Annotation genericAnn = genericType[0].getAnnotations()[0];
                         List lPara = getArgByAnn(genericAnn, mthMap, instance);
-                        paraArray.add(getAllPossibleListPara(listLength.min(), listLength.max(),lPara));
+                        paraArray.add(getAllPossibleListPara(listLength.min(), listLength.max(), lPara));
                     }
-                }else {
+                } else {
                     paraArray.add(getArgByAnn(paras[pi].getAnnotations()[0], mthMap, instance));
                 }
             }
             // get all possible combination of para
-            List<Object[]>  paraL = getAllParaInstance(paraArray);
+            List<Object[]> paraL = getAllParaInstance(paraArray);
             int invokeCount = 0;
             //assume no exception
             resl.put(proptMth.get(i), null);
             for (Object[] p : paraL) {
                 try {
                     //at most invoke 100
-                    if(invokeCount > 100){
+                    if (invokeCount > 100) {
                         break;
-                    }else {
+                    } else {
+                        //all before methods
+                        invokeMths(mthMap, instance, befMth);
                         propM.invoke(instance, p);
                         invokeCount++;
+                        //all after methods
+                        invokeMths(mthMap, instance, aftMth);
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
@@ -204,6 +165,8 @@ public class Unit {
                 }
             }
         }
+        //all afterClass methods
+        invokeMths(mthMap, c, aftClassMth);
         return resl;
     }
 
@@ -212,25 +175,25 @@ public class Unit {
     }*/
 
 
-    private static List getArgByAnn(Annotation ann, Map<String, Method> mthMap, Object instance){
+    private static List getArgByAnn(Annotation ann, Map<String, Method> mthMap, Object instance) {
         List paraL = new LinkedList();
         //get int
-        if(ann instanceof IntRange){
-            IntRange intRange = (IntRange)ann;
-            for (int i = intRange.min(); i <= intRange.max(); i++ ){
+        if (ann instanceof IntRange) {
+            IntRange intRange = (IntRange) ann;
+            for (int i = intRange.min(); i <= intRange.max(); i++) {
                 paraL.add(i);
             }
             return paraL;
         }
         //get string
-        if(ann instanceof StringSet){
-            StringSet strSet = (StringSet)ann;
-            for (String s : strSet.strings()){
+        if (ann instanceof StringSet) {
+            StringSet strSet = (StringSet) ann;
+            for (String s : strSet.strings()) {
                 paraL.add(s);
             }
             return paraL;
         }
-        if(ann instanceof ForAll){
+        if (ann instanceof ForAll) {
             ForAll forAll = (ForAll) ann;
             String mthName = forAll.name();
             try {
@@ -240,15 +203,15 @@ public class Unit {
                 }
                 //call randCallTimes time
                 paraL.add(mth.invoke(instance));
-            }catch ( IllegalAccessException | InvocationTargetException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException("ForAll: " + e);
             }
             return paraL;
         }
-        if(ann instanceof ListLength){
-            ListLength listLength = (ListLength)ann;
-            for (int i = listLength.min(); i <= listLength.max(); i++ ){
+        if (ann instanceof ListLength) {
+            ListLength listLength = (ListLength) ann;
+            for (int i = listLength.min(); i <= listLength.max(); i++) {
                 paraL.add(i);
             }
             return paraL;
@@ -258,21 +221,22 @@ public class Unit {
     }
 
     //return list of list
-    private static List getAllPossibleListPara(int min, int max, List lPara){
-        List<List>  ll = new LinkedList();
+    private static List getAllPossibleListPara(int min, int max, List lPara) {
+        List<List> ll = new LinkedList();
         for (int l = min; l <= max; l++) {
-            if (ll.size() > 110){
+            if (ll.size() > 110) {
                 return ll;
-            }else {
+            } else {
                 ll.addAll(getAllPossibleListParaByLength(l, lPara));
             }
         }
         return ll;
     }
+
     //return list of list
-    private static List getAllPossibleListParaByLength(int length, List lPara){
-        List  ll = new LinkedList();
-        if (length == 1){
+    private static List getAllPossibleListParaByLength(int length, List lPara) {
+        List ll = new LinkedList();
+        if (length == 1) {
             for (Object o : lPara) {
                 LinkedList lOne = new LinkedList();
                 lOne.add(o);
@@ -282,8 +246,8 @@ public class Unit {
         } else {
             for (Object o : lPara) {
                 //lMore is a list<Object> size = length - 1
-                for (Object lMore : getAllPossibleListParaByLength(length - 1, lPara)){
-                    List lm = (List)lMore;
+                for (Object lMore : getAllPossibleListParaByLength(length - 1, lPara)) {
+                    List lm = (List) lMore;
                     lm.add(o);
                     ll.add(lm);
                 }
@@ -294,19 +258,19 @@ public class Unit {
 
     // @Para  paraArray List<List>
     // @return list<Object[]> each is possible para Array
-    private  static List<Object[]>  getAllParaInstance(List<List> paraArray){
+    private static List<Object[]> getAllParaInstance(List<List> paraArray) {
         List<Object[]> paraInstanceArrayList = new LinkedList();
         // para size only 1
-        if (paraArray.size() == 1){
+        if (paraArray.size() == 1) {
             //paraArray.get(0) is list of possible values for this 0-th para
-            for (Object o : paraArray.get(0)){
-                Object[] paras =  new Object[1];
+            for (Object o : paraArray.get(0)) {
+                Object[] paras = new Object[1];
                 paras[0] = o;
                 paraInstanceArrayList.add(paras);
             }
             return paraInstanceArrayList;
             //para more than 110
-        }else if (paraInstanceArrayList.size() > 110) {
+        } else if (paraInstanceArrayList.size() > 110) {
             return paraInstanceArrayList;
         } else {
             // //paraArray.get(paraArray.size() - 1) is
@@ -326,6 +290,90 @@ public class Unit {
         }
     }
 
+    private static HashMap<String, List<String>> getMthType(String name) {
+        HashMap<String, List<String>> rel = new HashMap<String, List<String>>();
+        Map<String, Method> mthMap = new HashMap<>();
+        List<String> testMth = new LinkedList<String>();
+        List<String> befClassMth = new LinkedList<String>();
+        List<String> befMth = new LinkedList<String>();
+        List<String> aftClassMth = new LinkedList<String>();
+        List<String> aftMth = new LinkedList<String>();
+        List<String> proptMth = new LinkedList<String>();
+        Class c = null;
+        try {
+            c = Class.forName(name);
+        } catch (
+                ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new NoSuchElementException("ClassNotFoundException: " + e);
+        }
+        Method[] methods = c.getMethods();
+        for (Method m : methods) {
+            mthMap.put(m.getName(), m);
+            int count = 0;
+            Annotation[] annotations = m.getAnnotations();
+            for (Annotation a : annotations) {
+                if (a.annotationType().equals(Test.class)) {
+                    if (count == 0) {
+                        testMth.add(m.getName());
+                        count++;
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+                if (a instanceof BeforeClass) {
+                    if (count == 0) {
+                        if (Modifier.isStatic(m.getModifiers())) {
+                            befClassMth.add(m.getName());
+                            count++;
+                        } else
+                            throw new NoSuchElementException("BeforeClass annotations: not public static " + m.getName());
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+//                if (a .annotationType().equals(Before.class) ) {
+                if (a instanceof Before) {
+                    if (count == 0) {
+                        befMth.add(m.getName());
+                        count++;
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+                if (a instanceof AfterClass) {
+                    if (count == 0) {
+                        if (Modifier.isStatic(m.getModifiers())) {
+                            aftClassMth.add(m.getName());
+                            count++;
+                        } else
+                            throw new NoSuchElementException("AfterClass annotations: not public static " + m.getName());
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+                if (a instanceof After) {
+                    if (count == 0) {
+                        aftMth.add(m.getName());
+                        count++;
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+                if (a instanceof Property) {
+                    if (count == 0) {
+                        proptMth.add(m.getName());
+                        count++;
+                    } else throw new NoSuchElementException("duplicated annotations " + m.getName());
+                }
+            }
+        }
+        //sort all the methods name by alpha
+        Collections.sort(testMth);
+        Collections.sort(befClassMth);
+        Collections.sort(befMth);
+        Collections.sort(aftClassMth);
+        Collections.sort(aftMth);
+        Collections.sort(proptMth);
+
+        rel.put("testMth", testMth);
+        rel.put("befClassMth", befClassMth);
+        rel.put("befMth", befMth);
+        rel.put("aftClassMth", aftClassMth);
+        rel.put("aftMth", aftMth);
+        rel.put("proptMth", proptMth);
+        return rel;
+}
     /*//a int range from min to max, inclusive
     private static Integer getRandomIntInRange(int min, int max){
         Random r = new Random();

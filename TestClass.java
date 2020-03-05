@@ -52,14 +52,14 @@ public class TestClass {
     }
 
     @Property
-    public void testStringSet(@StringSet(strings = {"se","sucks","java","good"}) String i){
-        System.out.println("testInt: " + i);
+    public void testStringSet(@StringSet(strings = {"1","as"}) String i){
+        System.out.println("testStringSet: " + i);
     }
 
 
     @Property
     public void testList(@ListLength(min = 1, max = 5) List<@IntRange(min = 1, max = 7) Integer>  l, @IntRange(min = 1, max = 6) Integer i){
-        System.out.println("testInt: " + l + " " + i);
+        System.out.println("testList: " + l + " " + i);
     }
 
 
@@ -67,7 +67,7 @@ public class TestClass {
     public void testObject(@ForAll(name="genIntSet", times=10) Object o) {
         HashSet s = (HashSet) o;
         s.add("foo");
-        System.out.println("s.contains(\"foo\"): " + s.contains("foo")); ;
+        System.out.println("testObject: s.contains(\"foo\"): " + s.contains("foo")); ;
     }
 
     int count = 0;
