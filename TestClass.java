@@ -72,7 +72,7 @@ public class TestClass {
     public void testObject(@ForAll(name="genIntSet", times=10) Object o) {
         HashSet s = (HashSet) o;
         s.add("foo");
-        System.out.println("testObject: s.contains(\"foo\"): " + s.contains("foo")); ;
+        System.out.println("testObject: s.contains(\"foo\"): " + s.contains("foo") + s.toString()); ;
     }
 
     int count = 0;

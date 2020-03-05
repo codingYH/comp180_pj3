@@ -91,7 +91,7 @@ public class Unit {
         // invoke propMth
         for (int i = 0; i < proptMth.size(); i++) {
             //assume no exception
-            resl.put( proptMth.get(i), null);
+            resl.put( proptMth.get(i), new Object[]{new Object()});
             List<List> paraArray = new LinkedList();
             Method propM = mthMap.get(proptMth.get(i));
             AnnotatedType[] paras = propM.getAnnotatedParameterTypes();
@@ -172,11 +172,9 @@ public class Unit {
             try {
                 Method mth = mthMap.get(mthName);
                 for (int t = 0; t < forAll.times(); t++) {
-                    mth.invoke(instance);
                     paraL.add(mth.invoke(instance));
                 }
                 //call randCallTimes time
-
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 throw new NoSuchElementException("ForAll: " + e);
