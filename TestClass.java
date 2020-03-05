@@ -47,7 +47,7 @@ public class TestClass {
     }
 
     @Property
-    public void testInt(@IntRange(min = 1, max = 40) Integer i){
+    public void testInt(@IntRange(min = 1, max = 1) Integer i){
         System.out.println("testInt: " + i);
     }
 

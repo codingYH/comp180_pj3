@@ -59,35 +59,6 @@ public class Unit {
         //return result map
         return resl;
     }
-
-    //invoke all instance method
-    private static void invokeMths(Map<String, Method> mthMap, Object instance, List<String> mths) {
-        for (int i = 0; i < mths.size(); i++) {
-            try {
-                Method m = mthMap.get(mths.get(i));
-                //static,
-                m.invoke(instance);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                throw new NoSuchElementException(" method invoke wrong: " + e);
-            }
-        }
-    }
-
-    //invoke all static method
-    private static void invokeMths(Map<String, Method> mthMap, Class c, List<String> mths) {
-        for (int i = 0; i < mths.size(); i++) {
-            try {
-                Method m = mthMap.get(mths.get(i));
-                //static,
-                m.invoke(c);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                throw new NoSuchElementException(" method invoke wrong: " + e);
-            }
-        }
-    }
-
     public static HashMap<String, Object[]> quickCheckClass(String name) {
         Map mthType = getMthType(name);
         Map<String, Method> mthMap = new HashMap<>();
@@ -146,22 +117,22 @@ public class Unit {
             //assume no exception
             resl.put(proptMth.get(i), null);
             for (Object[] p : paraL) {
-                try {
-                    //at most invoke 100
-                    if (invokeCount > 100) {
-                        break;
-                    } else {
-                        //all before methods
-                        invokeMths(mthMap, instance, befMth);
-                        propM.invoke(instance, p);
-                        invokeCount++;
-                        //all after methods
-                        invokeMths(mthMap, instance, aftMth);
-                    }
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                    resl.put(proptMth.get(i), paras);
+                //at most invoke 100
+                if (invokeCount > 100) {
                     break;
+                } else {
+                    //all before methods
+                    invokeMths(mthMap, instance, befMth);
+                    try {
+                        invokeCount++;
+                        propM.invoke(instance, p);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        e.printStackTrace();
+                        resl.put(proptMth.get(i), p);
+                        break;
+                    }
+                    //all after methods
+                    invokeMths(mthMap, instance, aftMth);
                 }
             }
         }
@@ -243,6 +214,8 @@ public class Unit {
                 ll.add(lOne);
             }
             return ll;
+        } else if (ll.size() > 110){
+            return ll;
         } else {
             for (Object o : lPara) {
                 //lMore is a list<Object> size = length - 1
@@ -251,8 +224,7 @@ public class Unit {
                     lm.add(o);
                     ll.add(lm);
                 }
-            }
-            return ll;
+            }return ll;
         }
     }
 
@@ -374,6 +346,33 @@ public class Unit {
         rel.put("proptMth", proptMth);
         return rel;
 }
+    //invoke all instance method
+    private static void invokeMths(Map<String, Method> mthMap, Object instance, List<String> mths) {
+        for (int i = 0; i < mths.size(); i++) {
+            try {
+                Method m = mthMap.get(mths.get(i));
+                //static,
+                m.invoke(instance);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+                throw new NoSuchElementException(" method invoke wrong: " + e);
+            }
+        }
+    }
+
+    //invoke all static method
+    private static void invokeMths(Map<String, Method> mthMap, Class c, List<String> mths) {
+        for (int i = 0; i < mths.size(); i++) {
+            try {
+                Method m = mthMap.get(mths.get(i));
+                //static,
+                m.invoke(c);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+                throw new NoSuchElementException(" method invoke wrong: " + e);
+            }
+        }
+    }
     /*//a int range from min to max, inclusive
     private static Integer getRandomIntInRange(int min, int max){
         Random r = new Random();
